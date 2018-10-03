@@ -1,0 +1,243 @@
+﻿@model OnboardingProjectFinal.Models.SaleViewModel
+
+@{
+    /**/
+
+    ViewBag.Title = "Sale Page";
+}
+<!--This is the sale view page, Created by John Li, 2018 09 13-->
+<script src="~/Scripts/jquery-3.3.1.min.js"></script>
+<script src="~/Scripts/bootstrap.min.js"></script>
+<link href="~/Content/bootstrap.min.css" rel="stylesheet" />
+
+<div class="container" style="margin-top:3%">
+    <h2>Sale View</h2>
+    <!--button on click trigger the Create action and pop up the modal (MyModal)-->
+    <a href="#" class="btn btn-info" onclick="AddSaleRecord(0)">Add New Sale Record</a> <br /><br />
+    <!--Product table in main page-->
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Product Name</th>
+                <th>Customer Name</th>
+                <th>Store Name</th>
+                <th>Date Sold</th>
+                <th>Action(Edit)</th>
+                <th>Action(Delete)</th>
+            </tr>
+        </thead>
+        <tbody id="SetSaleList">
+            <tr id="LoadingStatus" style="color:red"></tr>
+        </tbody>
+    </table>
+    <!--/.sale table-->
+    <!--input modal-->
+    <div class="modal fade" id="MyModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <a href="#" class="close" data-dismiss="modal">&times;</a>
+                    <h4 id="ModalTitle"></h4>
+                </div>
+                <!--modal content-->
+                <div class="modal-body">
+                    <form id="form">
+                        <fieldset id="SubmitForm">
+                            @Html.HiddenFor(m => m.Id, new { @id = "SaleId" })
+                            <div class="form-group">
+                                <label>Product Name:</label> @Html.DropDownListFor(m => m.ProductId, ViewBag.ListOfProducts as SelectList, "--Select Product--", new { @id = "DropDwnPro", @class = "form-control" })
+                            </div>
+                            <div class="form-group">
+                                <label> Customer Name:</label> @Html.DropDownListFor(m => m.CustomerId, ViewBag.ListOfCustomers as SelectList, "--Select Customer--", new { @id = "DropDwnCust", @class = "form-control" })
+                            </div>
+                            <div class="form-group">
+                                <label> Store Name:</label> @Html.DropDownListFor(m => m.StoreId, ViewBag.ListOfStores as SelectList, "--Select Store--", new { @id = "DropDwnStore", @class = "form-control" })
+                            </div>
+                            <div class="form-group">
+                                <label> Date:</label> @Html.TextBoxFor(m => m.DataSold, new { @id = "DataSold", @class = "form-control datepicker", @placeholder = "Date" })
+                            </div>
+                            <div class="form-group">
+                                <a href="#" class="btn btn-danger" id="SaveSaleRecord">Save</a>
+                                <a href="#" class="btn btn-danger" data-dismiss="modal">close</a>
+                            </div>
+                        </fieldset>
+                    </form>
+                </div><!--/.modal content-->
+            </div>
+        </div>
+    </div><!--input modal-->
+    <!--delete Confirmation modal-->
+    <div class="modal fade" id="DeleteConfirmation">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <a href="#" class="close" data-dismiss="modal">&times;</a>
+                    <h4>Delete Student Record</h4>
+                </div>
+                <div class="modal-body">
+                    <h4>Are You Sure? You Want To Delete This Record.</h4>
+                </div>
+                <div class="modal-footer">
+                    <a href="#" class="btn btn-primary" data-dismiss="modal" id="r">Cancle</a>
+                    <a href="#" class="btn btn-danger" onclick="ConfirmDelete()">Confirm</a>
+                </div>
+            </div>
+        </div>
+    </div><!--/.delete Confirmation modal-->
+    <!--delete success modal-->
+    <div class="modal fade" id="DeleteSuc">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <a href="#" class="close" data-dismiss="modal">&times;</a>
+                    <h4>Success!</h4>
+                </div>
+                <div class="modal-body">
+                    <h4>Delete Successful!</h4>
+                </div>
+                <div class="modal-footer">
+                    <a href="#" class="btn btn-danger" data-dismiss="modal">close</a>
+                </div>
+            </div>
+        </div>
+    </div><!--/.delete success modal-->
+</div>
+<link href="~/Contents/bootstrap-datepicker.css" rel="stylesheet" />
+<script src="~/Scripts/bootstrap-datepicker.min.js"></script>
+<script src="~/Scripts/moment.js"></script>
+
+<script>
+$("#LoadingStatus").html("Loading....");
+    //using ajax connect with controller and show information of products on the page
+    $.get("/Sale/GetSaleList", null, DataBind);
+    function DataBind(SaleList) {
+        var SetData = $("#SetSaleList");
+        for (var i = 0; i < SaleList.length; i++) {
+            var DateMilliseconds = parseInt(SaleList[i].DataSold.replace(/\D/igm, ""));
+            var Date_sold = new Date(DateMilliseconds);
+
+            var Data = "<tr class='row_" + SaleList[i].Id + "'>" +
+                "<td>" + SaleList[i].ProductName + "</td>" +
+                "<td>" + SaleList[i].CustomerName + "</td>" +
+                "<td>" + SaleList[i].StoreName + "</td>" +
+                "<td>" + Date_sold.format('yyyy-MM-dd') + "</td>" +
+                "<td>" + "<a href='#' class='btn btn-warning' onclick='EditSaleRecord(" + SaleList[i].Id + ")' ><span class='glyphicon glyphicon-edit'></span></a>" + "</td>" +
+                "<td>" + "<a href='#' class='btn btn-danger' onclick='DeleteSaleRecord(" + SaleList[i].Id + ")'><span class='glyphicon glyphicon-trash'></span></a>" + "</td>" +
+                "</tr>";
+            SetData.append(Data);
+            $("#LoadingStatus").html(" ");
+
+        }
+    }
+    //set the datepicker control
+    $('.datepicker').datepicker({
+        "autoclose": true, "format": "yyyy-mm-dd", "language": "zh-CN"
+    });
+    //set the date format
+    Date.prototype.format = function (format) {
+        var o = {
+            "M+": this.getMonth() + 1, //month
+            "d+": this.getDate(),    //day
+            "h+": this.getHours(),   //hour
+            "m+": this.getMinutes(), //minute
+            "s+": this.getSeconds(), //second
+            "q+": Math.floor((this.getMonth() + 3) / 3),  //quarter
+            "S": this.getMilliseconds() //millisecond
+        }
+        if (/(y+)/.test(format)) format = format.replace(RegExp.$1,
+            (this.getFullYear() + "").substr(4 - RegExp.$1.length));
+        for (var k in o) if (new RegExp("(" + k + ")").test(format))
+            format = format.replace(RegExp.$1,
+                RegExp.$1.length == 1 ? o[k] :
+                    ("00" + o[k]).substr(("" + o[k]).length));
+        return format;
+    }
+    //set the AddSaleRecord modal
+    function AddSaleRecord(SaleList) {
+        $("#form")[0].reset();
+        $("#SaleId").val(0);
+        $("#DropDwnPro option:selected").text("--Select Product--");
+        $("#DropDwnCust option:selected").text("--Select Customer--");
+        $("#DropDwnStore option:selected").text("--Select Store--");
+        $("#ModalTitle").html("Add New Sale");
+        $("#MyModal").modal();
+
+    }
+    //edit the sale
+    function EditSaleRecord(SaleId) {
+        //show the edited sale information on the edit modal
+        var url = "/Sale/GetSaleRecordById?SaleId=" + SaleId;
+        $("#ModalTitle").html("Update Sale Record");
+        $("#MyModal").modal();
+        $.ajax({
+            type: "GET",
+            url: url,
+            success: function (data) {
+                var obj = JSON.parse(data);
+
+                var subSataSolde = obj.DataSold.substring(0, 10);
+                //bind the name and id to the down list
+                $("#SaleId").val(obj.Id);
+                $("#DropDwnPro option:selected").text(obj.Product.Name);
+                $("#DropDwnPro option:selected").val(obj.ProductId);
+                $("#DropDwnCust option:selected").text(obj.Customer.Name);
+                $("#DropDwnCust option:selected").val(obj.CustomerId);
+                $("#DropDwnStore option:selected").text(obj.Store.Name);
+                $("#DropDwnStore option:selected").val(obj.StoreId);
+                $("#DataSold").val(subSataSolde);
+            }
+        })
+    }
+
+    $("#SaveSaleRecord").click(function () {
+        //validation
+        if ($('#DropDwnPro').val() == null) {
+            alert("Product name cannot be null, please input again!");
+            window.location.href = "/Sale/Index";
+        } else if ($('#DropDwnCust').val() == null) {
+            alert("Customer name cannot be null, please input again!");
+            window.location.href = "/Sale/Index";
+        } else if ($('#DropDwnStore').val() == null) {
+            alert("Store name cannot be null, please input again!");
+            window.location.href = "/Sale/Index";
+        } else {
+            var data = $("#SubmitForm").serialize();
+
+            $.ajax({
+                type: "Post",
+                url: "/Sale/SaveDataInDatabase",
+                data: data,
+                success: function (result) {
+                    //validate if the input date is null
+                    if (result == "re") {
+                        alert("data cannot be null, please input again");
+                        $("#MyModal").modal();
+                    } else {
+                        alert("Success!..");
+                        window.location.href = "/Sale/Index";
+                        $("#MyModal").modal("hide");
+                    }
+                }
+            })
+        }
+
+    })
+    //delete sale record
+    var DeleteSaleRecord = function (SaleId) {
+        $("#SaleId").val(SaleId);
+        $("#DeleteConfirmation").modal("show");
+    }
+
+    var ConfirmDelete = function () {
+        var SaleId = $("#SaleId").val();
+
+        $.ajax({
+            type: "POST",
+            url: "/Sale/DeleteSaleRecord?SaleId=" + SaleId,
+            success: function (result) {
+                $('#DeleteSuc').modal();
+                $("#DeleteConfirmation").modal("hide");
+                $(".row_" + SaleId).remove();
+            }
+        })
+    }</script>

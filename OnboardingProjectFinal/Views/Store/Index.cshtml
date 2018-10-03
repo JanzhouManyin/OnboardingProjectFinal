@@ -1,0 +1,302 @@
+﻿@model OnboardingProjectFinal.Models.Store
+@{
+    ViewBag.Title = "Index";
+}
+
+<!--This is the Store view page, Created by John Li, 2018 09 13-->
+<script src="~/Scripts/jquery-3.3.1.min.js"></script>
+<script src="~/Scripts/bootstrap.min.js"></script>
+<link href="~/Content/bootstrap.min.css" rel="stylesheet" />
+<div class="container" style="margin-top:3%">
+    <h2>Store Details</h2>
+    <!--button on click trigger the Create action and pop up the modal (MyModal)-->
+    <a href="#" class="btn btn-info" onclick="AddStoreRecord(0)">Add New Store Record</a> <br /><br />
+    <!--Store table in main page-->
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Store Name</th>
+                <th>Store Address</th>
+                <th>Action(Edit)</th>
+                <th>Action(Delete)</th>
+            </tr>
+        </thead>
+        <tbody id="SetStoreList">
+            <tr id="LoadingStatus" style="color:red"></tr>
+        </tbody>
+    </table>
+    <!--/.Store table-->
+    <!--input modal-->
+    <div class="modal fade" id="MyModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <a href="#" class="close" data-dismiss="modal">&times;</a>
+                    <h4 id="ModalTitle"></h4>
+                </div>
+                <div class="modal-body">
+                    <form id="form">
+                        <fieldset id="SubmitForm">
+                            @Html.HiddenFor(m => m.Id, new { @id = "StoreId" })
+                            <div class="form-group">
+                                <label> Store Name:</label> <br />
+                                @*@Html.TextBoxFor(m => m.Name, new { @id = "CustomerName", @class = "form-control", @placeholder = "Name*" })*@
+                                <input name="Name" id="StoreName" class="form-control" data-bind="value: name" />
+
+                            </div>
+                            <div class="form-group">
+                                <label> Store Address:</label> <br />
+                                @*@Html.TextBoxFor(m => m.Address, new { @id = "CustomerAddress", @class = "form-control", @placeholder = "Address*" })*@
+                                <input name="Address" id="StoreAddress" class="form-control" data-bind="value: Address" />
+                            </div>
+
+                            <div class="form-group">
+                                <a href="#" class="btn btn-danger" data-bind="click:SubmitClick" id="SaveStoreRecord">Save</a>
+                                <a href="#" class="btn btn-danger" data-dismiss="modal">close</a>
+                            </div>
+                        </fieldset>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div><!--input modal-->
+    <!--validatin fail prompt modal-->
+    <div class="modal fade" id="Warning">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <a href="#" class="close" data-dismiss="modal">&times;</a>
+                    <h4>Warning!</h4>
+                </div>
+                <div class="modal-body">
+                    <h4>This Store is already existing!</h4>
+                </div>
+                <div class="modal-footer">
+                    <a href="#" class="btn btn-danger" data-dismiss="modal">close</a>
+                </div>
+            </div>
+        </div>
+    </div><!--/.validatin fail prompt modal-->
+    <!--delete success modal-->
+    <div class="modal fade" id="DeleteSuc">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <a href="#" class="close" data-dismiss="modal">&times;</a>
+                    <h4>Success!</h4>
+                </div>
+                <div class="modal-body">
+                    <h4>Delete Successful!</h4>
+                </div>
+                <div class="modal-footer">
+                    <a href="#" class="btn btn-danger" data-dismiss="modal">close</a>
+                </div>
+            </div>
+        </div>
+    </div><!--/.delete success modal-->
+    <!--Store existing prompt modal-->
+    <div class="modal fade" id="WrongWarning">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <a href="#" class="close" data-dismiss="modal">&times;</a>
+                    <h4>Warning!</h4>
+                </div>
+                <div class="modal-body">
+                    <h4>Information is not correct!Please input again!</h4>
+                </div>
+                <div class="modal-footer">
+                    <a href="#" class="btn btn-danger" data-dismiss="modal">close</a>
+
+                </div>
+            </div>
+        </div>
+    </div><!--/.Store existing prompt modal-->
+    <!--delete Confirmation modal-->
+    <div class="modal fade" id="DeleteConfirmation">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <a href="#" class="close" data-dismiss="modal">&times;</a>
+                    <h4>Delete Store Record</h4>
+                </div>
+                <div class="modal-body">
+                    <h4>Are You Sure? You Want To Delete This Record.</h4>
+                </div>
+                <div class="modal-footer">
+                    <a href="#" class="btn btn-primary" data-dismiss="modal" id="r">Cancle</a>
+                    <a href="#" class="btn btn-danger" onclick="ConfirmDelete()">Confirm</a>
+                </div>
+            </div>
+        </div>
+    </div><!--/.delete Confirmation modal-->
+</div>
+
+
+
+<script src="~/Scripts/knockout-3.4.2.js"></script>
+<script src="~/Scripts/knockout.validation.js"></script>
+<script>
+    $("#LoadingStatus").html("Loading....");
+    //using ajax connect with controller and show information of Store on the page
+    $.get("/Store/GetStoreList", null, DataBind);
+    function DataBind(StoreList) {
+        var SetData = $("#SetStoreList");
+        for (var i = 0; i < StoreList.length; i++) {
+            var Data = "<tr class='row_" + StoreList[i].Id + "'>" +
+                "<td>" + StoreList[i].Name + "</td>" +
+                "<td>" + StoreList[i].Address + "</td>" +
+                "<td>" + "<a href='#' class='btn btn-warning' onclick='EditStoreRecord(" + StoreList[i].Id + ")' ><span class='glyphicon glyphicon-edit'></span></a>" + "</td>" +
+                "<td>" + "<a href='#' class='btn btn-danger' onclick='DeleteStoreRecord(" + StoreList[i].Id + ")'><span class='glyphicon glyphicon-trash'></span></a>" + "</td>" +
+                "</tr>";
+            SetData.append(Data);
+            $("#LoadingStatus").html(" ");
+        }
+    }
+
+
+    function AddStoreRecord(StoreList) {
+        $("#form")[0].reset();
+        $("#StoreId").val(0);
+        $("#ModalTitle").html("Add New Store");
+        $("#MyModal").modal();
+
+        //knockjs validation
+        var Stores = function () {
+            var self = this;
+            self.name = ko.observable().extend({
+                required: { params: true, message: "please input name." },
+                maxLength: 25
+            });
+
+            self.Address = ko.observable().extend({
+                required: { params: true, message: "please input Address." },
+                maxLength: 100
+            });
+
+            //submit data by ajax
+            self.SubmitClick = function () {
+                self.errors = ko.validation.group(self);
+                //validation successful
+                if (Stores.isValid().length == 0) {
+                    var data = $("#SubmitForm").serialize();
+
+                    $.ajax({
+                        type: "Post",
+                        url: "/Store/SaveDataInDatabase",
+                        data: data,
+                        success: function (result) {
+                            //determing if the Store name already exsts
+                            if (result == "no") {
+                                $("#Warning").modal();
+                            } else {
+                                alert("Success!..");
+                                window.location.href = "/Store/Index";
+                                $("#MyModal").modal("hide");
+                            }
+                        }
+                    })
+                } else {
+                    //validation fail
+                    $('#WrongWarning').modal();
+                    self.errors.showAllMessages();
+
+                }
+            };
+        };
+        var Stores = new Stores();
+        ko.applyBindings(Stores);
+        Stores.isValid = ko.validation.group(Stores);
+
+    }
+
+    //edit the Store
+    function EditStoreRecord(StoreId) {
+
+        var url = "/Store/GetStoreRecordById?StoreId=" + StoreId;
+        $("#ModalTitle").html("Update Store Record");
+        $("#MyModal").modal();
+        $.ajax({
+            type: "GET",
+            url: url,
+            success: function (data) {
+
+                var obj = JSON.parse(data);
+                $("#StoreId").val(obj.Id);
+                $("#StoreName").val(obj.Name);
+                $("#StoreAddress").val(obj.Address);
+            }
+        })
+
+        //validation
+        var Storesupdate = function () {
+            var self = this;
+            self.name = ko.observable().extend({
+                maxLength: 50
+            });
+
+            self.Address = ko.observable().extend({
+                maxLength: 100
+            });
+
+            //submit data by ajax
+            self.SubmitClick = function () {
+                self.errors = ko.validation.group(self);
+
+                //validation successful
+                if (Storesupdate.isValid().length == 0) {
+                    var data = $("#SubmitForm").serialize();
+                    $.ajax({
+                        type: "Post",
+                        url: "/Store/SaveDataInDatabase",
+                        data: data,
+                        success: function (result) {
+                            //determing if the Store name already exsts
+                            if (result == "no") {
+                                $("#Warning").modal();
+                            } else {
+                                alert("Success!..");
+                                window.location.href = "/Store/Index";
+                                $("#MyModal").modal("hide");
+                            }
+                        }
+                    })
+                } else {
+                    $("#WrongWarning").modal();
+                    self.errors.showAllMessages();
+
+                }
+            };
+        };
+        var Storesupdate = new Storesupdate();
+        ko.applyBindings(Storesupdate);
+        Storesupdate.isValid = ko.validation.group(Storesupdate);
+
+    }
+
+    //delete Store
+    var DeleteStoreRecord = function (SaleId) {
+        $("#StoreId").val(SaleId);
+        $("#DeleteConfirmation").modal("show");
+    }
+
+    var ConfirmDelete = function () {
+        var StoreId = $("#StoreId").val();
+
+        $.ajax({
+            type: "POST",
+            url: "/Store/DeleteStoreRecord?StoreId=" + StoreId,
+            success: function (result) {
+                if (result == "use") {
+                    alert("This Store has been already used, please check the sale page!");
+                    window.location.href = "/Store/Index";
+                } else {
+                    $('#DeleteSuc').modal();
+                    $("#DeleteConfirmation").modal("hide");
+                    $(".row_" + StoreId).remove();
+                }
+
+            }
+        })
+    }
+</script>

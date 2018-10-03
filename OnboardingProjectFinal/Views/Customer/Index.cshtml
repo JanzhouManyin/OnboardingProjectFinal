@@ -1,0 +1,299 @@
+﻿@model OnboardingProjectFinal.Models.Customer
+@{
+    ViewBag.Title = "Index";
+}
+
+<!--This is the Customer view page, Created by John Li, 2018 09 13-->
+<script src="~/Scripts/jquery-3.3.1.min.js"></script>
+<script src="~/Scripts/bootstrap.min.js"></script>
+<link href="~/Content/bootstrap.min.css" rel="stylesheet" />
+<div class="container" style="margin-top:3%">
+    <h2>Customer Details</h2>
+    <!--button on click trigger the Create action and pop up the modal (MyModal)-->
+    <a href="#" class="btn btn-info" onclick="AddCustomerRecord(0)">Add New Customer Record</a> <br /><br />
+    <!--Customer table in main page-->
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Customer Name</th>
+                <th>Customer Address</th>
+                <th>Action(Edit)</th>
+                <th>Action(Delete)</th>
+            </tr>
+        </thead>
+        <tbody id="SetCustomerList">
+            <tr id="LoadingStatus" style="color:red"></tr>
+        </tbody>
+    </table>
+    <!--/.Customer table-->
+    <!--input modal-->
+    <div class="modal fade" id="MyModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <a href="#" class="close" data-dismiss="modal">&times;</a>
+                    <h4 id="ModalTitle"></h4>
+                </div>
+                <div class="modal-body">
+                    <form id="form">
+                        <fieldset id="SubmitForm">
+                            @Html.HiddenFor(m => m.Id, new { @id = "CustomerId" })
+                            <div class="form-group">
+                                <label> Customer Name:</label> <br />
+                                @*@Html.TextBoxFor(m => m.Name, new { @id = "CustomerName", @class = "form-control", @placeholder = "Name*" })*@
+                                <input name="Name" id="CustomerName" class="form-control" data-bind="value: name" />
+
+                            </div>
+                            <div class="form-group">
+                                <label> Customer Address:</label> <br />
+                                @*@Html.TextBoxFor(m => m.Address, new { @id = "CustomerAddress", @class = "form-control", @placeholder = "Address*" })*@
+                                <input name="Address" id="CustomerAddress" class="form-control" data-bind="value: Address" />
+                            </div>
+
+                            <div class="form-group">
+                                <a href="#" class="btn btn-danger" data-bind="click:SubmitClick" id="SaveCustomerRecord">Save</a>
+                                <a href="#" class="btn btn-danger" data-dismiss="modal">close</a>
+                            </div>
+                        </fieldset>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div><!--input modal-->
+    <!--validatin fail prompt modal-->
+    <div class="modal fade" id="Warning">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <a href="#" class="close" data-dismiss="modal">&times;</a>
+                    <h4>Warning!</h4>
+                </div>
+                <div class="modal-body">
+                    <h4>This Customer is already existing!</h4>
+                </div>
+                <div class="modal-footer">
+                    <a href="#" class="btn btn-danger" data-dismiss="modal">close</a>
+                </div>
+            </div>
+        </div>
+    </div><!--/.validatin fail prompt modal-->
+    <!--delete success modal-->
+    <div class="modal fade" id="DeleteSuc">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <a href="#" class="close" data-dismiss="modal">&times;</a>
+                    <h4>Success!</h4>
+                </div>
+                <div class="modal-body">
+                    <h4>Delete Successful!</h4>
+                </div>
+                <div class="modal-footer">
+                    <a href="#" class="btn btn-danger" data-dismiss="modal">close</a>
+                </div>
+            </div>
+        </div>
+    </div><!--/.delete success modal-->
+    <!--Customer existing prompt modal-->
+    <div class="modal fade" id="WrongWarning">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <a href="#" class="close" data-dismiss="modal">&times;</a>
+                    <h4>Warning!</h4>
+                </div>
+                <div class="modal-body">
+                    <h4>Information is not correct!Please input again!</h4>
+                </div>
+                <div class="modal-footer">
+                    <a href="#" class="btn btn-danger" data-dismiss="modal">close</a>
+
+                </div>
+            </div>
+        </div>
+    </div><!--/.Customer existing prompt modal-->
+    <!--delete Confirmation modal-->
+    <div class="modal fade" id="DeleteConfirmation">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <a href="#" class="close" data-dismiss="modal">&times;</a>
+                    <h4>Delete Customer Record</h4>
+                </div>
+                <div class="modal-body">
+                    <h4>Are You Sure? You Want To Delete This Record.</h4>
+                </div>
+                <div class="modal-footer">
+                    <a href="#" class="btn btn-primary" data-dismiss="modal" id="r">Cancle</a>
+                    <a href="#" class="btn btn-danger" onclick="ConfirmDelete()">Confirm</a>
+                </div>
+            </div>
+        </div>
+    </div><!--/.delete Confirmation modal-->
+</div>
+
+<script src="~/Scripts/knockout-3.4.2.js"></script>
+<script src="~/Scripts/knockout.validation.js"></script>
+<script>
+    $("#LoadingStatus").html("Loading....");
+    //using ajax connect with controller and show information of Customer on the page
+    $.get("/Customer/GetCustomerList", null, DataBind);
+    function DataBind(CustomerList) {
+        var SetData = $("#SetCustomerList");
+        for (var i = 0; i < CustomerList.length; i++) {
+            var Data = "<tr class='row_" + CustomerList[i].Id + "'>" +
+                "<td>" + CustomerList[i].Name + "</td>" +
+                "<td>" + CustomerList[i].Address + "</td>" +
+                "<td>" + "<a href='#' class='btn btn-warning' onclick='EditCustomerRecord(" + CustomerList[i].Id + ")' ><span class='glyphicon glyphicon-edit'></span></a>" + "</td>" +
+                "<td>" + "<a href='#' class='btn btn-danger' onclick='DeleteCustomerRecord(" + CustomerList[i].Id + ")'><span class='glyphicon glyphicon-trash'></span></a>" + "</td>" +
+                "</tr>";
+            SetData.append(Data);
+            $("#LoadingStatus").html(" ");
+        }
+    }
+
+
+    function AddCustomerRecord(CustomerList) {
+        $("#form")[0].reset();
+        $("#CustomerId").val(0);
+        $("#ModalTitle").html("Add New Customer");
+        $("#MyModal").modal();
+
+        //knockjs validation
+        var Customers = function () {
+            var self = this;
+            self.name = ko.observable().extend({
+                required: { params: true, message: "please input name." },
+                maxLength: 25
+            });
+
+            self.Address = ko.observable().extend({
+                required: { params: true, message: "please input Address." },
+                maxLength: 100
+            });
+
+            //submit data by ajax
+            self.SubmitClick = function () {
+                self.errors = ko.validation.group(self);
+                //validation successful
+                if (Customers.isValid().length == 0) {
+                    var data = $("#SubmitForm").serialize();
+
+                    $.ajax({
+                        type: "Post",
+                        url: "/Customer/SaveDataInDatabase",
+                        data: data,
+                        success: function (result) {
+                            //determing if the Customer name already exsts
+                            if (result == "no") {
+                                $("#Warning").modal();
+                            } else {
+                                alert("Success!..");
+                                window.location.href = "/Customer/Index";
+                                $("#MyModal").modal("hide");
+                            }
+                        }
+                    })
+                } else {
+                    //validation fail
+                    $('#WrongWarning').modal();
+                    self.errors.showAllMessages();
+
+                }
+            };
+        };
+        var Customers = new Customers();
+        ko.applyBindings(Customers);
+        Customers.isValid = ko.validation.group(Customers);
+
+    }
+
+    //edit the Customer
+    function EditCustomerRecord(CustomerId) {
+
+        var url = "/Customer/GetCustomerRecordById?CustomerId=" + CustomerId;
+        $("#ModalTitle").html("Update Customer Record");
+        $("#MyModal").modal();
+        $.ajax({
+            type: "GET",
+            url: url,
+            success: function (data) {
+                var obj = JSON.parse(data);
+                $("#CustomerId").val(obj.Id);
+                $("#CustomerName").val(obj.Name);
+                $("#CustomerAddress").val(obj.Address);
+            }
+        })
+
+        //validation
+        var Customersupdate = function () {
+            var self = this;
+            self.name = ko.observable().extend({
+                maxLength: 50
+            });
+
+            self.Address = ko.observable().extend({
+                maxLength: 100
+            });
+
+            //submit data by ajax
+            self.SubmitClick = function () {
+                self.errors = ko.validation.group(self);
+
+                //validation successful
+                if (Customersupdate.isValid().length == 0) {
+                    var data = $("#SubmitForm").serialize();
+                    $.ajax({
+                        type: "Post",
+                        url: "/Customer/SaveDataInDatabase",
+                        data: data,
+                        success: function (result) {
+                            //determing if the Customer name already exsts
+                            if (result == "no") {
+                                $("#Warning").modal();
+                            } else {
+                                alert("Success!..");
+                                window.location.href = "/Customer/Index";
+                                $("#MyModal").modal("hide");
+                            }
+                        }
+                    })
+                } else {
+                    $("#WrongWarning").modal();
+                    self.errors.showAllMessages();
+
+                }
+            };
+        };
+        var Customersupdate = new Customersupdate();
+        ko.applyBindings(Customersupdate);
+        Customersupdate.isValid = ko.validation.group(Customersupdate);
+
+    }
+
+    //delete Customer
+    var DeleteCustomerRecord = function (SaleId) {
+        $("#CustomerId").val(SaleId);
+        $("#DeleteConfirmation").modal("show");
+    }
+
+    var ConfirmDelete = function () {
+        var CustomerId = $("#CustomerId").val();
+
+        $.ajax({
+            type: "POST",
+            url: "/Customer/DeleteCustomerRecord?CustomerId=" + CustomerId,
+            success: function (result) {
+                if (result == "use") {
+                    alert("This Customer has been already used, please check the sale page!");
+                    window.location.href = "/Customer/Index";
+                } else {
+                    $('#DeleteSuc').modal();
+                    $("#DeleteConfirmation").modal("hide");
+                    $(".row_" + CustomerId).remove();
+                }
+
+            }
+        })
+    }
+</script>
